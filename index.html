@@ -246,7 +246,7 @@ textarea.in{min-height:78px}
 .pv .card{opacity:1;transform:none;transition:none}
 .pv h1 .w span,.pv .av,.pv .role,.pv .bio{animation:none}
 .pv .demo,.pv .spot{display:none}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.card{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.card{opacity:1;transform:none}.mq div{animation:mq 70s linear infinite!important}}
 </style>
 </head>
 <body>
@@ -688,7 +688,7 @@ if(PV){
   document.body.classList.add("pv");
   addEventListener("click",e=>{if(e.target.closest("a"))e.preventDefault()},true);
   try{parent.postMessage({lb:"ready"},"*")}catch(_){}
-}else(async()=>{CFG=await loadCfg();saved=JSON.stringify(CFG);await route()})();
+}else(async()=>{if(/\/admin\/?$/i.test(location.pathname))history.replaceState(null,"","/#admin");CFG=await loadCfg();saved=JSON.stringify(CFG);await route()})();
 </script>
 </body>
 </html>

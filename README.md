@@ -45,7 +45,7 @@ Setelah menyimpan variabel, jalankan **Trigger deploy** supaya aktif.
 ## Cara pakai
 
 - Halaman publik: `https://namasitusmu.netlify.app/`
-- Panel admin: `https://namasitusmu.netlify.app/#admin` → masuk dengan `ADMIN_PASSWORD`
+- Panel admin: `https://namasitusmu.netlify.app/admin` (atau `/#admin`) → masuk dengan `ADMIN_PASSWORD`
 - Panel admin punya **pratinjau langsung**: di layar lebar tampil di sisi kanan, di ponsel buka lewat tombol **Pratinjau** di bar atas. Setiap ketikan langsung terlihat sebelum disimpan.
 - Edit profil, tambah/hapus/urutkan produk, ganti warna, lalu tekan **Simpan**. Perubahan langsung tampil ke semua pengunjung, tanpa deploy ulang.
 - Sebelum ada data tersimpan, halaman menampilkan contoh bawaan.

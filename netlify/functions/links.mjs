@@ -39,6 +39,7 @@ const url = (v, max = 800) => {
   if (!u) return "";
   if (/^(javascript|data|vbscript|file):/i.test(u)) return "";
   if (/^(mailto|tel):/i.test(u)) return u;
+  if (/^\/(?!\/)/.test(u)) return u; // path file di situs sendiri, mis. /foto.jpg
   if (!/^https?:\/\//i.test(u)) u = "https://" + u.replace(/^\/\//, "");
   return u;
 };

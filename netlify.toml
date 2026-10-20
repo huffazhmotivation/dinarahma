@@ -16,3 +16,14 @@
   for = "/index.html"
   [headers.values]
     Cache-Control = "no-cache"
+
+# /admin membuka halaman yang sama, lalu diarahkan ke panel admin oleh script
+[[redirects]]
+  from = "/admin"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/"
+  to = "/index.html"
+  status = 200
