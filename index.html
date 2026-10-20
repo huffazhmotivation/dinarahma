@@ -268,7 +268,7 @@ textarea.in{min-height:78px}
   <div class="mq" id="mq" aria-hidden="true"><div id="mqi"></div></div>
   <div class="bar">
     <div class="fil" id="fil" role="group" aria-label="Kategori"><span class="ind" id="ind"></span></div>
-    <label class="sr" id="sr"><span style="position:absolute;left:-9999px">Cari produk</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="q" type="search" placeholder="Cari…" autocomplete="off" enterkeyhint="search"></label>
+    <label class="sr" id="sr"><span style="position:absolute;left:-9999px">Cari produk berdasarkan nama atau nomor</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="q" type="search" placeholder="Cari nama / nomor" autocomplete="off" enterkeyhint="search"></label>
   </div>
   <main class="grid" id="grid"></main>
   <p class="note" id="note"></p>
@@ -419,10 +419,12 @@ function applyAccent(){const R=document.documentElement;R.style.setProperty("--a
 
 /* ================= SITUS ================= */
 let cat="Semua",qs="",cur=[];
-const gen=(it,k)=>{const p=PAL[k%PAL.length];return `<div class="gen" style="--a:${p[0]};--b:${p[1]}"><b>${esc((it.title||"?").trim().charAt(0).toUpperCase())}</b></div>`};
+const gen=(it,k)=>{const p=PAL[k%PAL.length];return `<div class="gen" style="--a:${p[0]};--b:${p[1]}"></div>`};
 const art=(it,k)=>gen(it,k)+(it.image?`<img src="${esc(it.image)}" alt="${esc(it.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:"");
-const shown=()=>CFG.items.map((it,k)=>({...it,k})).filter(i=>i.on&&i.title);
-const vis=()=>shown().filter(i=>(cat==="Semua"||(cat==="♡ Favorit"?FAV.has(i.url):i.cat===cat))&&(!qs||i.title.toLowerCase().includes(qs))).sort((a,b)=>(b.featured?1:0)-(a.featured?1:0));
+/* Nomor kartu = urutan di etalase (kartu besar paling depan). Tetap sama walau difilter atau dicari. */
+const shown=()=>{const a=CFG.items.map((it,k)=>({...it,k})).filter(i=>i.on&&i.title);[...a].sort((x,y)=>(y.featured?1:0)-(x.featured?1:0)).forEach((it,n)=>{it.num=n+1});return a};
+const hit=i=>{const m=/^#?\s*0*(\d+)$/.exec(qs);return m?i.num===+m[1]:i.title.toLowerCase().includes(qs)};
+const vis=()=>shown().filter(i=>(cat==="Semua"||(cat==="♡ Favorit"?FAV.has(i.url):i.cat===cat))&&(!qs||hit(i))).sort((a,b)=>(b.featured?1:0)-(a.featured?1:0));
 const FAV=new Set((()=>{try{return JSON.parse(store.get("lb_fav")||"[]")}catch(_){return[]}})());
 
 function renderProfile(){
@@ -469,7 +471,7 @@ function draw(){
        <div class="art">${art(it,it.k)}</div><div class="shade"></div>
        ${it.tag?`<span class="tag">${esc(it.tag)}</span>`:""}
        <button class="heart" type="button" data-fav="${it.k}" aria-label="Favorit" aria-pressed="${FAV.has(it.url)}">${I(P.heart)}</button>
-       <span class="idx">${two(i+1)}</span><span class="peek">${I(P.eye,2.2)}Intip</span>
+       <span class="idx">${two(it.num)}</span><span class="peek">${I(P.eye,2.2)}Intip</span>
      </div>
      <div class="meta"><div class="tx"><span class="ttl">${esc(it.title)}</span>${it.price?`<span class="prc">${esc(it.price)}</span>`:""}</div>
        <a class="buy" href="${esc(safe(it.url))}" target="_blank" rel="noopener sponsored nofollow" aria-label="Buka ${esc(it.title)} di Shopee">${I(P.arrow,2.2)}</a></div>
