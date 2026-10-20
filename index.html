@@ -57,7 +57,7 @@ h1 .w span{display:inline-block;animation:rise 1s cubic-bezier(.2,.9,.25,1) both
 @keyframes fade{from{opacity:0;transform:translateY(10px)}}
 
 .mq{overflow:hidden;border-block:1px solid var(--ln);padding:11px 0;margin-bottom:22px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
-.mq div{display:flex;width:max-content;animation:mq 32s linear infinite}
+.mq div{display:flex;width:max-content;will-change:transform;animation:mq var(--mqd,40s) linear infinite}
 .mq span{padding-right:24px;white-space:nowrap;font:600 12px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
 .mq span::after{content:"";display:inline-block;width:5px;height:5px;margin-left:24px;border-radius:50%;background:var(--ac);vertical-align:middle}
 @keyframes mq{to{transform:translateX(-50%)}}
@@ -246,7 +246,7 @@ textarea.in{min-height:78px}
 .pv .card{opacity:1;transform:none;transition:none}
 .pv h1 .w span,.pv .av,.pv .role,.pv .bio{animation:none}
 .pv .demo,.pv .spot{display:none}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.card{opacity:1;transform:none}.mq div{animation:mq 70s linear infinite!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.card{opacity:1;transform:none}.mq div{animation:mq var(--mqd,40s) linear infinite!important}}
 </style>
 </head>
 <body>
@@ -434,7 +434,18 @@ function renderProfile(){
   $("#bio").textContent=CFG.bio;$("#bio").hidden=!CFG.bio;
   $("#foot").textContent=CFG.footer;$("#note").textContent=CFG.disclosure;
   $("#av").innerHTML=CFG.photo?`<img src="${esc(CFG.photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">${esc(CFG.name.trim().charAt(0).toUpperCase())}`:esc((CFG.name.trim().charAt(0)||"•").toUpperCase());
-  if(CFG.ticker.length){const h=CFG.ticker.map(t=>`<span>${esc(t)}</span>`).join("");$("#mqi").innerHTML=h+h+h+h;$("#mq").hidden=false}else $("#mq").hidden=true;
+  buildMq();
+}
+/* Teks berjalan: ulangi isi sampai satu bagian lebih lebar dari layar, supaya tidak ada ruang kosong saat bergeser. */
+function buildMq(){
+  const box=$("#mq"),row=$("#mqi");
+  if(!CFG.ticker.length){box.hidden=true;return}
+  box.hidden=false;
+  const one=CFG.ticker.map(t=>`<span>${esc(t)}</span>`).join("");
+  row.innerHTML=one;
+  const w=row.offsetWidth,n=w?Math.max(1,Math.ceil((box.clientWidth+60)/w)):6,half=one.repeat(n);
+  row.innerHTML=half+half;
+  row.style.setProperty("--mqd",Math.max(14,Math.round((w?w*n:1200)/45))+"s");
 }
 function buildFilter(){
   const cats=["Semua",...new Set(shown().map(i=>i.cat).filter(Boolean))];if(FAV.size)cats.push("♡ Favorit");
@@ -445,6 +456,8 @@ function buildFilter(){
 function moveInd(){const b=$('#fil button[aria-pressed=true]'),i=$("#ind");if(!b){i.style.width="0";return}i.style.width=b.offsetWidth+"px";i.style.transform=`translateX(${b.offsetLeft}px)`}
 $("#fil").addEventListener("click",e=>{const b=e.target.closest("button[data-c]");if(!b)return;cat=b.dataset.c;$$("#fil button").forEach(x=>x.setAttribute("aria-pressed",x===b));moveInd();b.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"});draw()});
 addEventListener("resize",moveInd);
+addEventListener("resize",()=>{clearTimeout(buildMq.t);buildMq.t=setTimeout(()=>{if(!$("#site").hidden)buildMq()},200)});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(!$("#site").hidden)buildMq()});
 $("#q").addEventListener("input",e=>{qs=e.target.value.trim().toLowerCase();$("#sr").classList.toggle("has",!!qs);draw()});
 
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.08,rootMargin:"0px 0px -4% 0px"});
