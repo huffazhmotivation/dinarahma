@@ -579,7 +579,12 @@ function itemHTML(it,i,n){
      <div class="fg">
        <label class="f full"><span>Nama produk</span><input class="in" data-f="title" value="${esc(it.title)}" maxlength="120" autocomplete="off"></label>
        <label class="f full"><span>Link Shopee afiliasi</span><input class="in" data-f="url" value="${esc(it.url)}" maxlength="800" placeholder="https://shope.ee/…" inputmode="url" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
-       <label class="f full"><span>URL gambar <em>terisi otomatis dari link Shopee</em></span><input class="in" data-f="image" value="${esc(it.image)}" maxlength="800" placeholder="Otomatis. Isi manual hanya jika gambar tidak muncul" inputmode="url" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
+       <label class="f full"><span>URL gambar <em>otomatis dari link, atau unggah sendiri</em></span><input class="in" data-f="image" value="${esc(it.image)}" maxlength="800" placeholder="Terisi otomatis / hasil unggahan" inputmode="url" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
+       <div class="f full" style="flex-direction:row;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+         <button class="btn" type="button" data-a="pick">${I(P.ul,2.2)}Unggah gambar</button>
+         ${it.image?`<button class="btn" type="button" data-a="noimg">${I(P.trash)}Hapus gambar</button>`:""}
+         <input type="file" accept="image/*" data-up hidden>
+       </div>
        <label class="f"><span>Harga <em>opsional</em></span><input class="in" data-f="price" value="${esc(it.price)}" maxlength="40" placeholder="Rp 99.000" autocomplete="off"></label>
        <label class="f"><span>Kategori <em>opsional</em></span><input class="in" data-f="cat" value="${esc(it.cat)}" maxlength="30" placeholder="Home, Fashion…" list="cl" autocomplete="off"></label>
        <label class="f"><span>Label <em>opsional</em></span><input class="in" data-f="tag" value="${esc(it.tag)}" maxlength="24" placeholder="Terlaris, Baru…" autocomplete="off"></label>
@@ -659,8 +664,28 @@ async function autoFill(id,{silent=false}={}){
     toast(n?"Gambar & data terisi otomatis ✓":"Tidak ada data baru")
   }catch(e){
     if(st)st.textContent=old;
-    if(!silent)toast("Gagal ambil otomatis. Isi URL gambar manual.")
+    if(!silent)toast((e&&e.message&&e.message!=="gagal"?e.message+" ":"Gagal ambil otomatis. ")+"Silakan unggah gambar manual.")
   }finally{autoBusy.delete(id)}
+}
+
+/* Unggah gambar manual: dikecilkan dulu di browser (maks 900px, JPEG), lalu disimpan di server. */
+function shrink(file,max=900){return new Promise((res,rej)=>{
+  const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{URL.revokeObjectURL(u);const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),cv=document.createElement("canvas");
+    cv.width=Math.round(im.naturalWidth*k);cv.height=Math.round(im.naturalHeight*k);
+    const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
+    let q=.86;const go=()=>cv.toBlob(b=>{if(!b)return rej(new Error("x"));if(b.size>600*1024&&q>.5){q-=.12;go()}else res(b)},"image/jpeg",q);go()};
+  im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("Gambar tidak bisa dibaca"))};im.src=u})}
+async function uploadImg(id,file){
+  const it=byId(id);if(!it)return;toast("Mengunggah gambar…");
+  try{
+    const blob=await shrink(file);
+    const r=await fetch(API+"?a=upload",{method:"POST",headers:{"Content-Type":"image/jpeg",Authorization:"Bearer "+token},body:blob});
+    let d=null;try{d=await r.json()}catch(_){}
+    if(r.status===401){logout("Sesi habis. Masuk lagi.");return}
+    if(!r.ok||!d||!d.url)throw new Error((d&&d.error)||"Gagal mengunggah");
+    it.image=d.url;refreshList();toast("Gambar terpasang ✓. Tekan Simpan.")
+  }catch(e){toast(e.message||"Gagal mengunggah gambar")}
 }
 
 const AW=$("#aw");
@@ -674,6 +699,7 @@ AW.addEventListener("input",e=>{const t=e.target;
   if(t.id==="hx"){let v=t.value.trim();if(v&&v[0]!=="#")v="#"+v;if(/^#[0-9a-f]{6}$/i.test(v))setAccent(v.toLowerCase(),true)}
   if(t.id==="cc")setAccent(t.value.toLowerCase())});
 AW.addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.up!==undefined&&t.files&&t.files[0]){const c=t.closest(".ic");if(c)uploadImg(c.dataset.id,t.files[0]);t.value="";return}
   if(t.dataset.f==="url"){const c=t.closest(".ic");if(c)autoFill(c.dataset.id)}
   if(t.dataset.f&&t.type==="checkbox"){const c=t.closest(".ic"),it=byId(c.dataset.id);it[t.dataset.f]=t.checked;
     if(t.dataset.f==="on"){c.classList.toggle("off",!it.on);c.querySelector(".ict small").textContent=(host(it.url)||"Belum ada URL")+(it.on?"":" · disembunyikan")}updStatus()}
@@ -693,6 +719,8 @@ AW.addEventListener("click",async e=>{
     CFG.items.splice(i,1);openIds.delete(id);refreshList();toast("Tautan dihapus");return}
   if(a==="up"||a==="down"){const j=a==="up"?i-1:i+1;if(j<0||j>=CFG.items.length)return;[CFG.items[i],CFG.items[j]]=[CFG.items[j],CFG.items[i]];refreshList();
     const nc=$(`.ic[data-id="${id}"]`);nc.scrollIntoView({block:"nearest",behavior:"smooth"});const nb=nc.querySelector(`[data-a="${a}"]:not(:disabled)`)||nc.querySelector('[data-a="up"]:not(:disabled),[data-a="down"]:not(:disabled)');if(nb)nb.focus({preventScroll:true});return}
+  if(a==="pick"){c.querySelector("[data-up]").click();return}
+  if(a==="noimg"){byId(id).image="";refreshList();toast("Gambar dihapus");return}
   if(a==="auto"){const it=byId(id);if(!it.url.trim()){toast("Isi link Shopee dulu");return}
     b.disabled=true;await autoFill(id);b.disabled=false}
 });

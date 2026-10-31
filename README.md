@@ -20,9 +20,11 @@ Di bawah bar kategori ada dua tombol besar untuk mengganti mode (yang aktif berw
 
 Pilihan mode diingat di browser pengunjung. Nomor sama di kedua mode, jadi pencarian nomor (mis. `12`) tetap jalan.
 
-## Gambar otomatis dari link Shopee
+## Gambar produk: otomatis atau unggah manual
 
-Di panel admin, tempel link Shopee di kolom **Link Shopee afiliasi**. Gambar produk (plus nama dan harga, jika kosong) terisi otomatis, tidak perlu menyalin URL gambar. Tombol **Isi otomatis** bisa dipakai untuk mencoba ulang. Server mengambil data dari halaman Shopee (`/api/links?a=preview`, hanya admin, hanya host Shopee). Jika Shopee memblokir permintaan untuk suatu link, isi **URL gambar** manual seperti biasa.
+Di panel admin, tempel link Shopee (termasuk link afiliasi `s.shopee.co.id/...` / `shope.ee/...`). Server mengikuti pengalihan lalu mencoba mengambil gambar, nama, dan harga (hanya yang masih kosong). Tombol **Isi otomatis** untuk mencoba ulang.
+
+Shopee kadang memblokir permintaan dari server. Jika gagal, muncul pesan penyebabnya. Pakai tombol **Unggah gambar** (pilih foto dari galeri/file): gambar dikecilkan otomatis di browser, disimpan di KV `ETALASE`, dan tampil di etalase. Tekan **Simpan** setelahnya. Kolom URL gambar tetap bisa diisi manual.
 
 ## Cara deploy (lewat GitHub)
 
