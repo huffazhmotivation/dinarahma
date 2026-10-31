@@ -126,15 +126,17 @@ footer{margin-top:14px;text-align:center;color:var(--t2);font:500 13px/1.3 var(-
 .vm button svg{width:19px;height:19px;flex:none}
 .vm button:hover{color:var(--tx)}.vm button:active{transform:scale(.96)}
 .vm button[aria-pressed=true]{background:var(--ac);color:var(--on);box-shadow:0 14px 22px -14px var(--ac)}
-.grid.is-list{display:flex;flex-direction:column;gap:0}
-.lr{display:flex;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px solid var(--ln);cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .6s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*50ms),transform .6s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*50ms)}
-.lr:first-child{border-top:1px solid var(--ln)}
+.grid.is-list{display:flex;flex-direction:column;gap:10px}
+.lr{display:flex;align-items:center;gap:14px;padding:12px 12px 12px 12px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--ln);cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .6s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*50ms),transform .6s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*50ms),box-shadow .25s,background .25s}
 .lr.in{opacity:1;transform:none}
-.lrn{flex:none;min-width:2em;font:700 13px/1 var(--sans);letter-spacing:.1em;color:var(--ac)}
-.lrt{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:600 15px/1.35 var(--sans);letter-spacing:-.01em;transition:color .2s}
+.lr.in:hover{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent);transform:translateY(-1px)}
+.lr:active{background:color-mix(in srgb,var(--ac) 6%,var(--card))}
+.lrn{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:color-mix(in srgb,var(--ac) 13%,transparent);color:var(--ac);font:700 13px/1 var(--sans);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.lrx{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.lrt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:600 14.5px/1.35 var(--sans);letter-spacing:-.01em;transition:color .2s}
 .lr:hover .lrt{color:var(--ac)}
-.lrp{flex:none;white-space:nowrap;font:700 14px/1 var(--sans);letter-spacing:-.01em;color:var(--t2)}
-.lr .buy{width:34px;height:34px;border-radius:11px}.lr .buy svg{width:16px;height:16px}
+.lrp{font:700 13.5px/1 var(--sans);letter-spacing:-.01em;color:var(--ac)}
+.lr .buy{margin-left:auto;width:38px;height:38px;border-radius:13px}.lr .buy svg{width:17px;height:17px}
 
 .sh{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;visibility:hidden}
 .sh.on{visibility:visible}
@@ -447,7 +449,7 @@ function applyView(){$("#grid").classList.toggle("is-list",view==="list");$$("#v
 $("#vm").addEventListener("click",e=>{const b=e.target.closest("button[data-v]");if(!b||b.dataset.v===view)return;view=b.dataset.v;store.set("lb_view",view);applyView();draw()});
 const rowHTML=(it,i)=>`
    <article class="lr" style="--d:${i%6}" data-open="${it.k}" role="button" tabindex="0" aria-label="${esc(it.title)}">
-     <span class="lrn">${two(it.num)}</span><span class="lrt">${esc(it.title)}</span>${it.price?`<span class="lrp">${esc(it.price)}</span>`:""}
+     <span class="lrn">${two(it.num)}</span><span class="lrx"><span class="lrt">${esc(it.title)}</span>${it.price?`<span class="lrp">${esc(it.price)}</span>`:""}</span>
      <a class="buy" href="${esc(safe(it.url))}" target="_blank" rel="noopener sponsored nofollow" aria-label="Buka ${esc(it.title)} di Shopee">${I(P.arrow,2.2)}</a>
    </article>`;
 const gen=(it,k)=>{const p=PAL[k%PAL.length];return `<div class="gen" style="--a:${p[0]};--b:${p[1]}"></div>`};
