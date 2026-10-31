@@ -80,7 +80,7 @@ h1 .w span{display:inline-block;animation:rise 1s cubic-bezier(.2,.9,.25,1) both
 @media (min-width:720px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}}
 @media (min-width:1020px){.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}}
 .card{position:relative;display:flex;flex-direction:column;opacity:0;transform:translateY(26px) scale(.98);transition:opacity .8s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*70ms),transform .8s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*70ms)}
-.card.in{opacity:1;transform:none}
+.card.rv{opacity:1;transform:none}
 .card.feat{grid-column:1/-1}
 @media (min-width:720px){.card.feat{grid-column:span 2}}
 .frame{position:relative;aspect-ratio:4/5;border-radius:var(--r);overflow:hidden;background:var(--sand);box-shadow:0 22px 34px -24px rgba(60,38,24,.6),inset 0 0 0 1px var(--ln);transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .3s cubic-bezier(.2,.9,.3,1);cursor:pointer}
@@ -127,9 +127,10 @@ footer{margin-top:14px;text-align:center;color:var(--t2);font:500 13px/1.3 var(-
 .vm button:hover{color:var(--tx)}.vm button:active{transform:scale(.96)}
 .vm button[aria-pressed=true]{background:var(--ac);color:var(--on);box-shadow:0 14px 22px -14px var(--ac)}
 .grid.is-list{display:flex;flex-direction:column;gap:10px}
+@media (min-width:860px){.grid.is-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
 .lr{display:flex;align-items:center;gap:14px;padding:12px 12px 12px 12px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--ln);cursor:pointer;opacity:0;transform:translateY(12px);transition:opacity .6s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*50ms),transform .6s cubic-bezier(.2,.9,.25,1) calc(var(--d,0)*50ms),box-shadow .25s,background .25s}
-.lr.in{opacity:1;transform:none}
-.lr.in:hover{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent);transform:translateY(-1px)}
+.lr.rv{opacity:1;transform:none}
+.lr.rv:hover{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent);transform:translateY(-1px)}
 .lr:active{background:color-mix(in srgb,var(--ac) 6%,var(--card))}
 .lrn{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:color-mix(in srgb,var(--ac) 13%,transparent);color:var(--ac);font:700 13px/1 var(--sans);letter-spacing:.04em;font-variant-numeric:tabular-nums}
 .lrx{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
@@ -495,7 +496,7 @@ addEventListener("resize",()=>{clearTimeout(buildMq.t);buildMq.t=setTimeout(()=>
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(!$("#site").hidden)buildMq()});
 $("#q").addEventListener("input",e=>{qs=e.target.value.trim().toLowerCase();$("#sr").classList.toggle("has",!!qs);draw()});
 
-const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.08,rootMargin:"0px 0px -4% 0px"});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("rv");io.unobserve(e.target)}}),{threshold:.08,rootMargin:"0px 0px -4% 0px"});
 function draw(){
   cur=vis();$("#stat").textContent=shown().length+" pilihan";
   $("#grid").innerHTML=cur.length?(view==="list"?cur.map(rowHTML).join(""):cur.map((it,i)=>`
