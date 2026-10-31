@@ -363,7 +363,7 @@ const PV = window.name==="lb-preview";
 const SRC = PV ? "" : "<!doctype html>"+document.documentElement.outerHTML;
 
 /* Opsional: endpoint yang mengambil gambar/judul/harga dari link Shopee. Balasan JSON {title,image,price}. */
-const AUTO_ENDPOINT = "";
+const AUTO_ENDPOINT = API ? API + "?a=preview" : "";
 
 /* Isi awal (sebelum kamu mengubah apa pun lewat panel admin). */
 const DEFAULT = {
@@ -579,7 +579,7 @@ function itemHTML(it,i,n){
      <div class="fg">
        <label class="f full"><span>Nama produk</span><input class="in" data-f="title" value="${esc(it.title)}" maxlength="120" autocomplete="off"></label>
        <label class="f full"><span>Link Shopee afiliasi</span><input class="in" data-f="url" value="${esc(it.url)}" maxlength="800" placeholder="https://shope.ee/…" inputmode="url" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
-       <label class="f full"><span>URL gambar <em>opsional</em></span><input class="in" data-f="image" value="${esc(it.image)}" maxlength="800" placeholder="https://… (klik kanan foto produk › salin alamat gambar)" inputmode="url" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
+       <label class="f full"><span>URL gambar <em>terisi otomatis dari link Shopee</em></span><input class="in" data-f="image" value="${esc(it.image)}" maxlength="800" placeholder="Otomatis. Isi manual hanya jika gambar tidak muncul" inputmode="url" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
        <label class="f"><span>Harga <em>opsional</em></span><input class="in" data-f="price" value="${esc(it.price)}" maxlength="40" placeholder="Rp 99.000" autocomplete="off"></label>
        <label class="f"><span>Kategori <em>opsional</em></span><input class="in" data-f="cat" value="${esc(it.cat)}" maxlength="30" placeholder="Home, Fashion…" list="cl" autocomplete="off"></label>
        <label class="f"><span>Label <em>opsional</em></span><input class="in" data-f="tag" value="${esc(it.tag)}" maxlength="24" placeholder="Terlaris, Baru…" autocomplete="off"></label>
@@ -638,6 +638,31 @@ const idxOf=id=>CFG.items.findIndex(i=>i.id===id);
 function refreshList(keepFocus){const n=CFG.items.length;$("#lst").innerHTML=n?CFG.items.map((it,i)=>itemHTML(it,i,n)).join(""):`<div class="none">Belum ada tautan. Tambahkan yang pertama.</div>`;$("#cnt").textContent=n+" total";
   $("#cl").innerHTML=[...new Set(CFG.items.map(i=>i.cat).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join("");updStatus()}
 
+
+/* Ambil gambar/judul/harga otomatis dari link Shopee. Dipanggil saat link ditempel/diubah. */
+const autoBusy=new Set();
+async function autoFill(id,{silent=false}={}){
+  const it=byId(id);if(!it||!AUTO_ENDPOINT||autoBusy.has(id))return;
+  const u=(it.url||"").trim();if(!/shope\.ee|shp\.ee|shopee\./i.test(u))return;
+  if(it.image&&it.title&&it.price)return;
+  autoBusy.add(id);const c=$(`.ic[data-id="${id}"]`),st=c&&c.querySelector(".ict small"),old=st&&st.textContent;
+  if(st)st.textContent="Mengambil gambar…";
+  try{
+    const r=await api(AUTO_ENDPOINT+"&url="+encodeURIComponent(u));
+    if(r.status===401){logout("Sesi habis. Masuk lagi.");return}
+    if(!r.ok||!r.data)throw new Error((r.data&&r.data.error)||"gagal");
+    const d=r.data;let n=0;
+    if(!it.image&&d.image){it.image=d.image;n++}
+    if(!it.title&&d.title){it.title=d.title;n++}
+    if(!it.price&&d.price){it.price=d.price;n++}
+    refreshList();
+    toast(n?"Gambar & data terisi otomatis ✓":"Tidak ada data baru")
+  }catch(e){
+    if(st)st.textContent=old;
+    if(!silent)toast("Gagal ambil otomatis. Isi URL gambar manual.")
+  }finally{autoBusy.delete(id)}
+}
+
 const AW=$("#aw");
 AW.addEventListener("input",e=>{const t=e.target;
   if(t.dataset.k){const k=t.dataset.k;CFG[k]=k==="ticker"?t.value.split("\n").map(x=>x.trim()).filter(Boolean):t.value;updStatus();return}
@@ -649,6 +674,7 @@ AW.addEventListener("input",e=>{const t=e.target;
   if(t.id==="hx"){let v=t.value.trim();if(v&&v[0]!=="#")v="#"+v;if(/^#[0-9a-f]{6}$/i.test(v))setAccent(v.toLowerCase(),true)}
   if(t.id==="cc")setAccent(t.value.toLowerCase())});
 AW.addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.f==="url"){const c=t.closest(".ic");if(c)autoFill(c.dataset.id)}
   if(t.dataset.f&&t.type==="checkbox"){const c=t.closest(".ic"),it=byId(c.dataset.id);it[t.dataset.f]=t.checked;
     if(t.dataset.f==="on"){c.classList.toggle("off",!it.on);c.querySelector(".ict small").textContent=(host(it.url)||"Belum ada URL")+(it.on?"":" · disembunyikan")}updStatus()}
   if(t.id==="im"&&t.files[0]){const rd=new FileReader();rd.onload=()=>{try{const j=JSON.parse(rd.result);if(!j||!Array.isArray(j.items))throw 0;CFG=norm(j);openIds.clear();applyAccent();buildAdmin();toast("Data diimpor. Tekan Simpan untuk menerapkan.")}catch(_){toast("File tidak valid")}t.value=""};rd.readAsText(t.files[0])}});
@@ -667,11 +693,10 @@ AW.addEventListener("click",async e=>{
     CFG.items.splice(i,1);openIds.delete(id);refreshList();toast("Tautan dihapus");return}
   if(a==="up"||a==="down"){const j=a==="up"?i-1:i+1;if(j<0||j>=CFG.items.length)return;[CFG.items[i],CFG.items[j]]=[CFG.items[j],CFG.items[i]];refreshList();
     const nc=$(`.ic[data-id="${id}"]`);nc.scrollIntoView({block:"nearest",behavior:"smooth"});const nb=nc.querySelector(`[data-a="${a}"]:not(:disabled)`)||nc.querySelector('[data-a="up"]:not(:disabled),[data-a="down"]:not(:disabled)');if(nb)nb.focus({preventScroll:true});return}
-  if(a==="auto"){const it=byId(id);if(!it.url.trim()){toast("Isi link Shopee dulu");return}b.disabled=true;
-    try{const d=await (await fetch(AUTO_ENDPOINT+"?url="+encodeURIComponent(it.url))).json();
-      it.title=it.title||d.title||"";it.image=it.image||d.image||"";it.price=it.price||d.price||"";refreshList();toast("Terisi otomatis")}
-    catch(_){toast("Gagal mengambil data otomatis");b.disabled=false}}
+  if(a==="auto"){const it=byId(id);if(!it.url.trim()){toast("Isi link Shopee dulu");return}
+    b.disabled=true;await autoFill(id);b.disabled=false}
 });
+AW.addEventListener("paste",e=>{const t=e.target;if(t&&t.dataset&&t.dataset.f==="url"){const c=t.closest(".ic");setTimeout(()=>{if(c)autoFill(c.dataset.id)},60)}});
 AW.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("ich")){e.preventDefault();e.target.click()}});
 
 async function save(){

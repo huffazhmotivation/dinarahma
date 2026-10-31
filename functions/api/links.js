@@ -87,6 +87,73 @@ const clean = (d) => {
   };
 };
 
+
+/* ---------- ambil gambar/judul/harga dari link Shopee (hanya admin) ---------- */
+// Hanya host Shopee yang boleh diambil (mencegah endpoint disalahgunakan untuk situs lain).
+const SHOPEE_HOST = /(^|\.)(shopee\.[a-z.]+|shope\.ee|shp\.ee|shopeemobile\.com)$/i;
+const UA = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+const decodeEnt = (t) =>
+  String(t || "")
+    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d));
+const meta = (html, names) => {
+  for (const n of names) {
+    const re1 = new RegExp('<meta[^>]+(?:property|name)=["\']' + n + '["\'][^>]*?content=["\']([^"\']*)["\']', "i");
+    const re2 = new RegExp('<meta[^>]+content=["\']([^"\']*)["\'][^>]*?(?:property|name)=["\']' + n + '["\']', "i");
+    const m = html.match(re1) || html.match(re2);
+    if (m && m[1].trim()) return decodeEnt(m[1].trim());
+  }
+  return "";
+};
+const rupiah = (v) => {
+  const n = Math.round(parseFloat(String(v).replace(/[^\d.]/g, "")));
+  return n > 0 ? "Rp " + n.toLocaleString("id-ID") : "";
+};
+const fetchShopee = async (start) => {
+  let u = new URL(start);
+  for (let hop = 0; hop < 6; hop++) {
+    if (!/^https?:$/.test(u.protocol) || !SHOPEE_HOST.test(u.hostname)) throw new Error("Host bukan Shopee");
+    const r = await fetch(u.toString(), {
+      redirect: "manual",
+      headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "id-ID,id;q=0.9" },
+    });
+    const loc = r.headers.get("location");
+    if (r.status >= 300 && r.status < 400 && loc) { u = new URL(loc, u); continue; }
+    const html = (await r.text()).slice(0, 600000);
+    // sebagian halaman perantara memakai meta refresh / redirect lewat JS
+    if (!meta(html, ["og:image"])) {
+      const m = html.match(/http-equiv=["']refresh["'][^>]*url=([^"'>\s]+)/i) || html.match(/location(?:\.href)?\s*=\s*["'](https?:[^"']+)["']/i);
+      if (m && hop < 5) { try { u = new URL(decodeEnt(m[1]), u); continue; } catch (_) {} }
+    }
+    return { html, final: u.toString() };
+  }
+  throw new Error("Terlalu banyak pengalihan");
+};
+const previewOf = async (link) => {
+  const { html, final } = await fetchShopee(link);
+  let image = meta(html, ["og:image:secure_url", "og:image", "twitter:image"]);
+  let title = meta(html, ["og:title", "twitter:title"]);
+  let price = meta(html, ["product:price:amount", "og:price:amount"]);
+  // cadangan: JSON-LD produk
+  if (!image || !title || !price) {
+    for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+      try {
+        const j = JSON.parse(m[1]);
+        const p = (Array.isArray(j) ? j : [j]).find((x) => x && /product/i.test(x["@type"] || ""));
+        if (!p) continue;
+        if (!image) image = [].concat(p.image || [])[0] || "";
+        if (!title) title = p.name || "";
+        if (!price && p.offers) price = [].concat(p.offers)[0].price || [].concat(p.offers)[0].lowPrice || "";
+      } catch (_) {}
+    }
+  }
+  if (image) image = new URL(image, final).toString();
+  title = title.replace(/\s*\|\s*Shopee.*$/i, "").replace(/^Jual\s+/i, "").trim();
+  return { title: title.slice(0, 120), image: /^https?:\/\//i.test(image) ? image : "", price: rupiah(price) };
+};
+
 /* ---------- handler ---------- */
 export async function onRequest({ request: req, env }) {
   const a = new URL(req.url).searchParams.get("a");
@@ -105,6 +172,22 @@ export async function onRequest({ request: req, env }) {
     if (req.method === "GET" && a === "session") {
       if (!(await authed(req, env))) return json({ error: "unauthorized" }, 401);
       return json({ ok: true, storage: env.ETALASE ? "kv" : "none" });
+    }
+
+    // ambil gambar/judul/harga dari link Shopee (admin)
+    if (req.method === "GET" && a === "preview") {
+      if (!(await authed(req, env))) return json({ error: "unauthorized" }, 401);
+      const link = new URL(req.url).searchParams.get("url") || "";
+      let parsed;
+      try { parsed = new URL(/^https?:\/\//i.test(link) ? link : "https://" + link); } catch (_) { return json({ error: "Link tidak valid." }, 400); }
+      if (!SHOPEE_HOST.test(parsed.hostname)) return json({ error: "Hanya link Shopee yang didukung." }, 400);
+      try {
+        const d = await previewOf(parsed.toString());
+        if (!d.image && !d.title) return json({ error: "Shopee tidak memberi data untuk link ini." }, 502);
+        return json(d);
+      } catch (e) {
+        return json({ error: "Gagal mengambil data dari Shopee." }, 502);
+      }
     }
 
     // baca data (publik)
