@@ -1,3 +1,0 @@
-# /admin membuka halaman yang sama, lalu diarahkan ke panel admin oleh script
-/admin /index.html 200
-/admin/ /index.html 200
